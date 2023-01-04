@@ -1,7 +1,18 @@
 # CHANGELOG
 
-## Version _._ - __ ___ 20__
-* Fix issue #371: Creating directory exits 1 if it already exists
+## Version 1.1 - 04 Jan 2023
+
+* Fixed code global and local variable scopes, remove unnecessary function keywords for all functions, and fixed return codes that cause bugs in API response.
+* Added a prompt to run setup wizard when unlink command is run or when config file is missing or has invalid character.
+* Fixed when invalid configuration file is saved, it will have prompt loop bug.
+* Added new commands:
+  * reauth, reconfigure: This will re-run the setup wizard. It will use existing app and secret keys if found. This will save your time re-entering the app and secret keys if you want to reconfigure the script.
+  * test: This will test the dropbox token permission (upload, download, share, delete). With this command, you can test if the token has the correct permission before you use the script.
+  * version: This will show the script version
+  * show-script-path, get-script-path, script-path: This will show the script path (useful for other scripts to get this script's current path)
+* Mention in setup wizard about sharing.write/read app scope that need to be enabled in dropbox app console to allow sharing features in this script
+* Added script alias dbxcli. run install.sh to install the alias
+* Updated script usage help
 
 ## Version 1.0 - 10 Aug 2016
 * Add search option

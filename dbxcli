@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/usr/local/opencode/dbxcli/dropbox_uploader.sh "$@"
