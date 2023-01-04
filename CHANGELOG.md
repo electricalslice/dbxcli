@@ -10,6 +10,8 @@
   * test: This will test the dropbox token permission (upload, download, share, delete). With this command, you can test if the token has the correct permission before you use the script.
   * version: This will show the script version
   * show-script-path, get-script-path, script-path: This will show the script path (useful for other scripts to get this script's current path)
+# Added new option:
+  * -c <chunk_size>: This will set the chunk size for upload and download. The default chunk size is the script CHUNK_SIZE value
 * Mention in setup wizard about sharing.write/read app scope that need to be enabled in dropbox app console to allow sharing features in this script
 * Added script alias dbxcli. run install.sh to install the alias
 * Updated script usage help

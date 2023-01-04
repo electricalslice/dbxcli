@@ -19,173 +19,6 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 
-#Default configuration file
-CONFIG_FILE=~/.dropbox_uploader.conf
-
-#Default chunk size in Mb for the upload process
-#It is recommended to increase this value only if you have enough free space on your /tmp partition
-#Lower values may increase the number of http requests
-CHUNK_SIZE=50
-
-#Curl location
-#If not set, curl will be searched into the $PATH
-#CURL_BIN="/usr/bin/curl"
-
-#Default values
-TMP_DIR="/tmp"
-DEBUG=0
-QUIET=0
-SHOW_PROGRESSBAR=0
-SKIP_EXISTING_FILES=0
-ERROR_STATUS=0
-EXCLUDE=()
-
-#Don't edit these...
-API_OAUTH_TOKEN="https://api.dropbox.com/oauth2/token"
-API_OAUTH_AUTHORIZE="https://www.dropbox.com/oauth2/authorize"
-API_LONGPOLL_FOLDER="https://notify.dropboxapi.com/2/files/list_folder/longpoll"
-API_CHUNKED_UPLOAD_START_URL="https://content.dropboxapi.com/2/files/upload_session/start"
-API_CHUNKED_UPLOAD_FINISH_URL="https://content.dropboxapi.com/2/files/upload_session/finish"
-API_CHUNKED_UPLOAD_APPEND_URL="https://content.dropboxapi.com/2/files/upload_session/append_v2"
-API_UPLOAD_URL="https://content.dropboxapi.com/2/files/upload"
-API_DOWNLOAD_URL="https://content.dropboxapi.com/2/files/download"
-API_DELETE_URL="https://api.dropboxapi.com/2/files/delete"
-API_MOVE_URL="https://api.dropboxapi.com/2/files/move"
-API_COPY_URL="https://api.dropboxapi.com/2/files/copy"
-API_METADATA_URL="https://api.dropboxapi.com/2/files/get_metadata"
-API_LIST_FOLDER_URL="https://api.dropboxapi.com/2/files/list_folder"
-API_LIST_FOLDER_CONTINUE_URL="https://api.dropboxapi.com/2/files/list_folder/continue"
-API_ACCOUNT_INFO_URL="https://api.dropboxapi.com/2/users/get_current_account"
-API_ACCOUNT_SPACE_URL="https://api.dropboxapi.com/2/users/get_space_usage"
-API_MKDIR_URL="https://api.dropboxapi.com/2/files/create_folder"
-API_SHARE_URL="https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings"
-API_SHARE_LIST="https://api.dropboxapi.com/2/sharing/list_shared_links"
-API_SAVEURL_URL="https://api.dropboxapi.com/2/files/save_url"
-API_SAVEURL_JOBSTATUS_URL="https://api.dropboxapi.com/2/files/save_url/check_job_status"
-API_SEARCH_URL="https://api.dropboxapi.com/2/files/search"
-APP_CREATE_URL="https://www.dropbox.com/developers/apps"
-RESPONSE_FILE="$TMP_DIR/du_resp_$RANDOM"
-CHUNK_FILE="$TMP_DIR/du_chunk_$RANDOM"
-TEMP_FILE="$TMP_DIR/du_tmp_$RANDOM"
-OAUTH_ACCESS_TOKEN_EXPIRE="0"
-OAUTH_ACCESS_TOKEN=""
-BIN_DEPS="sed basename date grep stat dd mkdir"
-VERSION="1.1"
-
-umask 077
-
-#Check the shell
-if [ -z "$BASH_VERSION" ]; then
-  echo -e "Error: this script requires the BASH shell!"
-  exit 1
-fi
-
-shopt -s nullglob #Bash allows filename patterns which match no files to expand to a null string, rather than themselves
-shopt -s dotglob  #Bash includes filenames beginning with a "." in the results of filename expansion
-
-#Check temp folder
-if [[ ! -d "${TMP_DIR}" ]]; then
-  echo -e "Error: the temporary folder ${TMP_DIR} doesn't exists!"
-  echo -e "Please edit this script and set the TMP_DIR variable to a valid temporary folder to use."
-  exit 1
-fi
-
-#Look for optional config file parameter
-while getopts ":qpskdhf:x:" opt; do
-  case $opt in
-
-  f)
-    CONFIG_FILE=$OPTARG
-    ;;
-
-  d)
-    DEBUG=1
-    ;;
-
-  q)
-    QUIET=1
-    ;;
-
-  p)
-    SHOW_PROGRESSBAR=1
-    ;;
-
-  k)
-    CURL_ACCEPT_CERTIFICATES="-k"
-    ;;
-
-  s)
-    SKIP_EXISTING_FILES=1
-    ;;
-
-  h)
-    HUMAN_READABLE_SIZE=1
-    ;;
-
-  x)
-    EXCLUDE+=("$OPTARG")
-    ;;
-
-  \?)
-    echo "Invalid option: -$OPTARG" >&2
-    exit 1
-    ;;
-
-  :)
-    echo "Option -$OPTARG requires an argument." >&2
-    exit 1
-    ;;
-
-  esac
-done
-
-if [[ $DEBUG -ne 0 ]]; then
-  echo $VERSION
-  uname -a 2>/dev/null
-  cat /etc/issue 2>/dev/null
-  set -x
-  RESPONSE_FILE="$TMP_DIR/du_resp_debug"
-fi
-
-if [[ $CURL_BIN == "" ]]; then
-  BIN_DEPS="$BIN_DEPS curl"
-  CURL_BIN="curl"
-fi
-
-#Dependencies check
-which $BIN_DEPS >/dev/null
-if [[ $? -ne 0 ]]; then
-  for BIN_DEP in $BIN_DEPS; do
-    which "${BIN_DEP}" >/dev/null ||
-      NOT_FOUND="${BIN_DEP} $NOT_FOUND"
-  done
-  echo -e "Error: Required program could not be found: $NOT_FOUND"
-  exit 1
-fi
-
-#Check if readlink is installed and supports the -m option
-#It's not necessary, so no problem if it's not installed
-which readlink >/dev/null
-if [[ $? -eq 0 && $(readlink -m "//test" 2>/dev/null) == "/test" ]]; then
-  HAVE_READLINK=1
-else
-  HAVE_READLINK=0
-fi
-
-#Forcing to use the builtin printf, if it's present, because it's better
-#otherwise the external printf program will be used
-#Note that the external printf command can cause character encoding issues!
-builtin printf "" 2>/dev/null
-if [[ $? -eq 0 ]]; then
-  PRINTF="builtin printf"
-  PRINTF_OPT="-v o"
-else
-  PRINTF=$(which printf)
-  if [[ $? -ne 0 ]]; then
-    echo -e "Error: Required program could not be found: printf"
-  fi
-  PRINTF_OPT=""
-fi
 
 #Print the message based on $QUIET variable
 print() {
@@ -279,6 +112,7 @@ usage() {
   echo -e "\t show-script-path, get-script-path, script-path"
 
   echo -e "\nOptional parameters:"
+  echo -e "\t-c <SIZE>     Use chunk size (default: ${CHUNK_SIZE})"
   echo -e "\t-f <FILENAME> Load the configuration file from a specific file"
   echo -e "\t-s            Skip already existing files when download/upload. Default: Overwrite"
   echo -e "\t-d            Enable DEBUG mode"
@@ -1699,6 +1533,180 @@ db_configure() {
 
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 SCRIPT_NAME=$(basename -- "$0")
+
+#Default configuration file
+CONFIG_FILE=~/.dropbox_uploader.conf
+
+#Default chunk size in Mb for the upload process
+#It is recommended to increase this value only if you have enough free space on your /tmp partition
+#Lower values may increase the number of http requests
+CHUNK_SIZE=50
+
+#Curl location
+#If not set, curl will be searched into the $PATH
+#CURL_BIN="/usr/bin/curl"
+
+#Default values
+TMP_DIR="/tmp"
+DEBUG=0
+QUIET=0
+SHOW_PROGRESSBAR=0
+SKIP_EXISTING_FILES=0
+ERROR_STATUS=0
+EXCLUDE=()
+
+#Don't edit these...
+API_OAUTH_TOKEN="https://api.dropbox.com/oauth2/token"
+API_OAUTH_AUTHORIZE="https://www.dropbox.com/oauth2/authorize"
+API_LONGPOLL_FOLDER="https://notify.dropboxapi.com/2/files/list_folder/longpoll"
+API_CHUNKED_UPLOAD_START_URL="https://content.dropboxapi.com/2/files/upload_session/start"
+API_CHUNKED_UPLOAD_FINISH_URL="https://content.dropboxapi.com/2/files/upload_session/finish"
+API_CHUNKED_UPLOAD_APPEND_URL="https://content.dropboxapi.com/2/files/upload_session/append_v2"
+API_UPLOAD_URL="https://content.dropboxapi.com/2/files/upload"
+API_DOWNLOAD_URL="https://content.dropboxapi.com/2/files/download"
+API_DELETE_URL="https://api.dropboxapi.com/2/files/delete"
+API_MOVE_URL="https://api.dropboxapi.com/2/files/move"
+API_COPY_URL="https://api.dropboxapi.com/2/files/copy"
+API_METADATA_URL="https://api.dropboxapi.com/2/files/get_metadata"
+API_LIST_FOLDER_URL="https://api.dropboxapi.com/2/files/list_folder"
+API_LIST_FOLDER_CONTINUE_URL="https://api.dropboxapi.com/2/files/list_folder/continue"
+API_ACCOUNT_INFO_URL="https://api.dropboxapi.com/2/users/get_current_account"
+API_ACCOUNT_SPACE_URL="https://api.dropboxapi.com/2/users/get_space_usage"
+API_MKDIR_URL="https://api.dropboxapi.com/2/files/create_folder"
+API_SHARE_URL="https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings"
+API_SHARE_LIST="https://api.dropboxapi.com/2/sharing/list_shared_links"
+API_SAVEURL_URL="https://api.dropboxapi.com/2/files/save_url"
+API_SAVEURL_JOBSTATUS_URL="https://api.dropboxapi.com/2/files/save_url/check_job_status"
+API_SEARCH_URL="https://api.dropboxapi.com/2/files/search"
+APP_CREATE_URL="https://www.dropbox.com/developers/apps"
+RESPONSE_FILE="$TMP_DIR/du_resp_$RANDOM"
+CHUNK_FILE="$TMP_DIR/du_chunk_$RANDOM"
+TEMP_FILE="$TMP_DIR/du_tmp_$RANDOM"
+OAUTH_ACCESS_TOKEN_EXPIRE="0"
+OAUTH_ACCESS_TOKEN=""
+BIN_DEPS="sed basename date grep stat dd mkdir"
+VERSION="1.1"
+
+umask 077
+
+#Check the shell
+if [ -z "$BASH_VERSION" ]; then
+  echo -e "Error: this script requires the BASH shell!"
+  exit 1
+fi
+
+shopt -s nullglob #Bash allows filename patterns which match no files to expand to a null string, rather than themselves
+shopt -s dotglob  #Bash includes filenames beginning with a "." in the results of filename expansion
+
+#Check temp folder
+if [[ ! -d "${TMP_DIR}" ]]; then
+  echo -e "Error: the temporary folder ${TMP_DIR} doesn't exists!"
+  echo -e "Please edit this script and set the TMP_DIR variable to a valid temporary folder to use."
+  exit 1
+fi
+
+#Look for optional config file parameter
+while getopts ":qpskdhfc:x:" opt; do
+  case $opt in
+
+  c)
+    CHUNK_SIZE="$OPTARG"
+    ;;
+
+  f)
+    CONFIG_FILE=$OPTARG
+    ;;
+
+  d)
+    DEBUG=1
+    ;;
+
+  q)
+    QUIET=1
+    ;;
+
+  p)
+    SHOW_PROGRESSBAR=1
+    ;;
+
+  k)
+    CURL_ACCEPT_CERTIFICATES="-k"
+    ;;
+
+  s)
+    SKIP_EXISTING_FILES=1
+    ;;
+
+  h)
+    HUMAN_READABLE_SIZE=1
+    ;;
+
+  x)
+    EXCLUDE+=("$OPTARG")
+    ;;
+
+  \?)
+    echo "Invalid option: -$OPTARG" >&2
+    exit 1
+    ;;
+
+  :)
+    echo "Option -$OPTARG requires an argument." >&2
+    exit 1
+    ;;
+
+  esac
+done
+
+if [[ $DEBUG -ne 0 ]]; then
+  echo $VERSION
+  uname -a 2>/dev/null
+  cat /etc/issue 2>/dev/null
+  set -x
+  RESPONSE_FILE="$TMP_DIR/du_resp_debug"
+fi
+
+if [[ $CURL_BIN == "" ]]; then
+  BIN_DEPS="$BIN_DEPS curl"
+  CURL_BIN="curl"
+fi
+
+#Dependencies check
+which $BIN_DEPS >/dev/null
+if [[ $? -ne 0 ]]; then
+  for BIN_DEP in $BIN_DEPS; do
+    which "${BIN_DEP}" >/dev/null ||
+      NOT_FOUND="${BIN_DEP} $NOT_FOUND"
+  done
+  echo -e "Error: Required program could not be found: $NOT_FOUND"
+  exit 1
+fi
+
+#Check if readlink is installed and supports the -m option
+#It's not necessary, so no problem if it's not installed
+which readlink >/dev/null
+if [[ $? -eq 0 && $(readlink -m "//test" 2>/dev/null) == "/test" ]]; then
+  HAVE_READLINK=1
+else
+  HAVE_READLINK=0
+fi
+
+#Forcing to use the builtin printf, if it's present, because it's better
+#otherwise the external printf program will be used
+#Note that the external printf command can cause character encoding issues!
+builtin printf "" 2>/dev/null
+if [[ $? -eq 0 ]]; then
+  PRINTF="builtin printf"
+  PRINTF_OPT="-v o"
+else
+  PRINTF=$(which printf)
+  if [[ $? -ne 0 ]]; then
+    echo -e "Error: Required program could not be found: printf"
+  fi
+  PRINTF_OPT=""
+fi
+
+
 
 #CHECKING FOR AUTH FILE
 if [[ -e $CONFIG_FILE ]]; then

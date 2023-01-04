@@ -15,7 +15,17 @@ This project was forked from https://github.com/andreafabrizi/Dropbox-Uploader a
 
   show-script-path, get-script-path, script-path: This will show the script path (useful for other scripts to get this script's current path)
   ````
+6) Added new options:
 
+```
+    -c <SIZE>     Use chunk size (default: 50)
+    
+    This option is used to specify upload chunk size. 
+    The script has a CHUNK_SIZE variable but when you use this option, 
+    it will override that CHUNK_SIZE variable.
+    
+
+```
 7) Mention in setup wizard about sharing.write/read app scope that need to be enabled in dropbox app console to allow sharing features in this script
 
 8) Added script alias as `dbxcli`. To use the command alias, you run the script `install.sh` first. After that you can access `dbxcli` anywhere in the shell
