@@ -913,6 +913,7 @@ db_test() {
 
   if [[ $failed_count -gt 0 ]]; then
     echo -e "\nError, one or more dropbox app permissions test failed"
+    echo -e "\nYou might want to run $(basename "$0") unlink and reconfigure the dropbox authentication"
   else
     echo -e "\nAll permissions are OK"
   fi
