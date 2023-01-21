@@ -1,3 +1,5 @@
 #!/bin/bash
 
-/usr/local/opencode/dbxcli/dropbox_uploader.sh "$@"
+SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
+
+"${SCRIPT_PATH}/dropbox_uploader.sh" "$@"
