@@ -101,6 +101,7 @@ usage() {
   echo -e "\t list     [REMOTE_DIR]"
   echo -e "\t monitor  [REMOTE_DIR] [TIMEOUT]"
   echo -e "\t share    <REMOTE_FILE>"
+  echo -e "\t sha      <REMOTE_FILE>"
   echo -e "\t saveurl  <URL> <REMOTE_DIR>"
   echo -e "\t search   <QUERY>"
   echo -e "\t info"
@@ -115,6 +116,7 @@ usage() {
   echo -e "\t-c <SIZE>     Use chunk size (default: ${CHUNK_SIZE})"
   echo -e "\t-f <FILENAME> Load the configuration file from a specific file"
   echo -e "\t-s            Skip already existing files when download/upload. Default: Overwrite"
+  echo -e "\t-t <DIRNAME>  Overwrite default TMP_DIR with specified dir name."
   echo -e "\t-d            Enable DEBUG mode"
   echo -e "\t-q            Quiet mode. Don't show messages"
   echo -e "\t-h            Show file sizes in human readable format"
@@ -289,6 +291,7 @@ db_stat() {
 }
 
 #Generic upload wrapper around db_upload_file and db_upload_dir functions
+#Use db_sha to verify upload success
 #$1 = Local source file/dir
 #$2 = Remote destination file/dir
 db_upload() {
@@ -1599,15 +1602,8 @@ fi
 shopt -s nullglob #Bash allows filename patterns which match no files to expand to a null string, rather than themselves
 shopt -s dotglob  #Bash includes filenames beginning with a "." in the results of filename expansion
 
-#Check temp folder
-if [[ ! -d "${TMP_DIR}" ]]; then
-  echo -e "Error: the temporary folder ${TMP_DIR} doesn't exists!"
-  echo -e "Please edit this script and set the TMP_DIR variable to a valid temporary folder to use."
-  exit 1
-fi
-
 #Look for optional config file parameter
-while getopts ":qpskdhfc:x:" opt; do
+while getopts ":qpskdhf:c:x:t:" opt; do
   case $opt in
 
   c)
@@ -1638,6 +1634,10 @@ while getopts ":qpskdhfc:x:" opt; do
     SKIP_EXISTING_FILES=1
     ;;
 
+  t)
+    TMP_DIR=$OPTARG
+    ;;
+
   h)
     HUMAN_READABLE_SIZE=1
     ;;
@@ -1658,6 +1658,14 @@ while getopts ":qpskdhfc:x:" opt; do
 
   esac
 done
+
+
+#Check temp folder
+if [[ ! -d "${TMP_DIR}" ]]; then
+  echo -e "Error: the temporary folder ${TMP_DIR} doesn't exists!"
+  echo -e "Please edit this script and set the TMP_DIR variable to a valid temporary folder to use."
+  exit 1
+fi
 
 if [[ $DEBUG -ne 0 ]]; then
   echo $VERSION
@@ -1956,6 +1964,12 @@ test)
 
 version)
   show_version
+  ;;
+
+sha)
+  file_name="${*:$#:1}"
+  res=$( db_sha "/$file_name" )
+  echo $res
   ;;
 
 show-script-path | get-script-path | script-path)
